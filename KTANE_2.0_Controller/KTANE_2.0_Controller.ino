@@ -4,6 +4,7 @@
 
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
+unsigned long last_polled = 0;
 
 enum Game_Phase {
   PREP,
@@ -35,11 +36,16 @@ struct MODULE_STATE {
 BetterTransferI2CMaster ET_GAME_STATE;
 GAME_STATE game_state;
 
+BetterTransferI2CMaster ET_MODULE_STATE;
+MODULE_STATE module_state;
+
 
 void setup() {
   Serial.begin(115200);
   Wire.begin();
   ET_GAME_STATE.begin(details(game_state), &Wire);
+  ET_MODULE_STATE.begin(details(module_state), &Wire);
+
   inputString.reserve(10);
 }
 void loop() {
@@ -67,10 +73,20 @@ void loop() {
       game_state.strikes++;
     }
     ET_GAME_STATE.sendData(I2C_SLAVE_ADDRESS);
-    
+
     // clear the string:
     inputString = "";
     stringComplete = false;
+  }
+
+  if (millis() > last_polled + 100) {
+    last_polled = millis();
+    if (ET_MODULE_STATE.receiveData(I2C_SLAVE_ADDRESS)) {
+      Serial.print("Module Strikes: ");
+      Serial.println(module_state.module_strikes);
+      Serial.print("Finished Stage: ");
+      Serial.println(module_state.finished_stage);
+    }
   }
 }
 

@@ -3,6 +3,9 @@
 #define I2C_SLAVE_ADDRESS 9
 
 
+String inputString = "";         // a String to hold incoming data
+bool stringComplete = false;  // whether the string is complete
+
 enum Game_Phase {
   PREP,
   GAME
@@ -32,17 +35,40 @@ struct MODULE_STATE {
 BetterTransferI2CSlave ET_GAME_STATE;
 GAME_STATE game_state;
 
+BetterTransferI2CSlave ET_MODULE_STATE;
+MODULE_STATE module_state;
 
 void setup() {
   Serial.begin(115200);
   Wire.begin(I2C_SLAVE_ADDRESS);
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
   ET_GAME_STATE.begin(details(game_state), &Wire);
-  //define handler function on receiving data
+  ET_MODULE_STATE.begin(details(module_state), &Wire);
+
+  inputString.reserve(10);
   Wire.onReceive(receive);
+  Wire.onRequest(request);;
 }
 
 void loop() {
+  // put your main code here, to run repeatedly:
+
+  if (stringComplete) {
+    if (inputString == "ready\n" || inputString == "disarm\n") {
+      module_state.finished_stage = true;
+    }
+    if (inputString == "arm\n" || inputString == "unprepared\n") {
+      module_state.finished_stage = false;
+    }
+    if (inputString == "strike\n") {
+      module_state.module_strikes++;
+    }
+
+    // clear the string:
+    inputString = "";
+    stringComplete = false;
+  }
+  
   if (ET_GAME_STATE.receiveData()) {
     Serial.print("Phase: ");
     Serial.println(game_state.phase);
@@ -68,6 +94,20 @@ void loop() {
 }
 
 
+void serialEvent() {
+  while (Serial.available()) {
+    // get the new byte:
+    char inChar = (char)Serial.read();
+    // add it to the inputString:
+    inputString += inChar;
+    // if the incoming character is a newline, set a flag so the main loop can
+    // do something about it:
+    if (inChar == '\n') {
+      stringComplete = true;
+    }
+  }
+}
+
 // HIDE EVERYTHING ABOVE THIS LINE IN A LIBRARY LATER
 
 struct PRIVATE_MODULE_STATE {
@@ -77,3 +117,6 @@ struct PRIVATE_MODULE_STATE {
 };
 
 void receive(int numBytes) {}
+void request() {
+  ET_MODULE_STATE.sendData();
+}
