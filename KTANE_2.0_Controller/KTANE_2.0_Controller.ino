@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <EasyTransferI2C.h>
+#include <BetterTransferI2CMaster.h>
 #define I2C_SLAVE_ADDRESS 9
 
 String inputString = "";         // a String to hold incoming data
@@ -32,7 +32,7 @@ struct MODULE_STATE {
 };
 
 
-EasyTransferI2C ET_GAME_STATE;
+BetterTransferI2CMaster ET_GAME_STATE;
 GAME_STATE game_state;
 
 

@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <EasyTransferI2C.h>
+#include <BetterTransferI2CSlave.h>
 #define I2C_SLAVE_ADDRESS 9
 
 
@@ -29,7 +29,7 @@ struct MODULE_STATE {
 };
 
 
-EasyTransferI2C ET_GAME_STATE;
+BetterTransferI2CSlave ET_GAME_STATE;
 GAME_STATE game_state;
 
 
