@@ -42,11 +42,11 @@ void setup() {
   Serial.begin(115200);
   Wire.begin(I2C_SLAVE_ADDRESS);
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
-  ET_GAME_STATE.begin(details(game_state), &Wire);
-  ET_MODULE_STATE.begin(details(module_state), &Wire);
+  ET_GAME_STATE.begin(details(game_state));
+  ET_MODULE_STATE.begin(details(module_state));
 
   inputString.reserve(10);
-  Wire.onReceive(receive);
+  Wire.onReceive(BetterTransferI2CSlave::onReceive);
   Wire.onRequest(request);;
 }
 
@@ -69,7 +69,7 @@ void loop() {
     stringComplete = false;
   }
   
-  if (ET_GAME_STATE.receiveData()) {
+  if (ET_GAME_STATE.updateData()) {
     Serial.print("Phase: ");
     Serial.println(game_state.phase);
     Serial.print("Strikes: ");
