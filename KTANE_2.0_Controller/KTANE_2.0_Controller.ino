@@ -6,29 +6,16 @@ String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 unsigned long last_polled = 0;
 
-enum Game_Phase {
-  PREP,
-  GAME
-};
-
 struct GAME_STATE {
   // This will hold the state of the game, armed, TotalStrikes, edgework, etc.
   // This needs to be the same on all modules and the controller
-  int strikes;
-  Game_Phase phase;
-  int batteries;
-  bool parallelPort;
-  bool serialOdd;
-  bool serialVowel;
+  int two;
 };
 
 struct MODULE_STATE {
   // This will hold the state of the module that is shared between modules and the controller, ModuleStrikes, FinishedStage
   // This needs to be the same on all modules and the controller
-  int module_strikes;
-  bool finished_stage;
-  char module_name[4];
-  uint8_t private_size;
+  int one;
 
 };
 
@@ -51,42 +38,22 @@ void setup() {
 void loop() {
 
   if (stringComplete) {
-    if (inputString == "arm\n") {
-      game_state.phase = GAME;
+    if (inputString == "one\n") {
+      module_state.one++;
+      Serial.print("One: ");
+      Serial.println(module_state.one);
     }
-    if (inputString == "disarm\n") {
-      game_state.phase = PREP;
-    }
-    if (inputString == "odd\n") {
-      game_state.serialOdd = true;
-    }
-    if (inputString == "even\n") {
-      game_state.serialOdd = false;
-    }
-    if (inputString == "vowel\n") {
-      game_state.serialVowel = true;
-    }
-    if (inputString == "novowel\n") {
-      game_state.serialVowel = false;
-    }
-    if (inputString == "strike\n") {
-      game_state.strikes++;
+    if (inputString == "two\n") {
+      game_state.two++;
+      Serial.print("Two: ");
+      Serial.println(game_state.two);
     }
     ET_GAME_STATE.sendData(I2C_SLAVE_ADDRESS);
+    ET_MODULE_STATE.sendData(I2C_SLAVE_ADDRESS);
 
     // clear the string:
     inputString = "";
     stringComplete = false;
-  }
-
-  if (millis() > last_polled + 100) {
-    last_polled = millis();
-    if (ET_MODULE_STATE.receiveData(I2C_SLAVE_ADDRESS)) {
-      Serial.print("Module Strikes: ");
-      Serial.println(module_state.module_strikes);
-      Serial.print("Finished Stage: ");
-      Serial.println(module_state.finished_stage);
-    }
   }
 }
 

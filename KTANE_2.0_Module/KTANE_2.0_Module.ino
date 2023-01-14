@@ -6,29 +6,18 @@
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 
-enum Game_Phase {
-  PREP,
-  GAME
-};
 
 struct GAME_STATE {
   // This will hold the state of the game, armed, TotalStrikes, edgework, etc.
   // This needs to be the same on all modules and the controller
-  int strikes;
-  Game_Phase phase;
-  int batteries;
-  bool parallelPort;
-  bool serialOdd;
-  bool serialVowel;
+  int two;
+
 };
 
 struct MODULE_STATE {
   // This will hold the state of the module that is shared between modules and the controller, ModuleStrikes, FinishedStage
   // This needs to be the same on all modules and the controller
-  int module_strikes;
-  bool finished_stage;
-  char module_name[4];
-  uint8_t private_size;
+  int one;
 };
 
 
@@ -41,55 +30,26 @@ MODULE_STATE module_state;
 void setup() {
   Serial.begin(115200);
   Wire.begin(I2C_SLAVE_ADDRESS);
-  //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
   ET_GAME_STATE.begin(details(game_state));
   ET_MODULE_STATE.begin(details(module_state));
 
   inputString.reserve(10);
   Wire.onReceive(BetterTransferI2CSlave::onReceive);
-  Wire.onRequest(request);;
+  Wire.onRequest(request);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (stringComplete) {
-    if (inputString == "ready\n" || inputString == "disarm\n") {
-      module_state.finished_stage = true;
-    }
-    if (inputString == "arm\n" || inputString == "unprepared\n") {
-      module_state.finished_stage = false;
-    }
-    if (inputString == "strike\n") {
-      module_state.module_strikes++;
-    }
-
-    // clear the string:
-    inputString = "";
-    stringComplete = false;
-  }
   
   if (ET_GAME_STATE.updateData()) {
-    Serial.print("Phase: ");
-    Serial.println(game_state.phase);
-    Serial.print("Strikes: ");
-    Serial.println(game_state.strikes);
-    Serial.print("Batteries: ");
-    Serial.println(game_state.batteries);
-    Serial.print("PP: ");
-    Serial.println(game_state.parallelPort);
-    Serial.print("Serial: ");
-    if (game_state.serialOdd) {
-      Serial.print("Odd, ");
-    } else {
-      Serial.print("Even, ");
-    }
-    if (game_state.serialVowel) {
-      Serial.println("Vowel ");
-    } else {
-      Serial.println("No Vowel ");
-    }
+    Serial.print("One: ");
+    Serial.println(module_state.one);
+    Serial.print("Two: ");
+    Serial.println(game_state.two);
+
   }
+  delay(1000);
 
 }
 
