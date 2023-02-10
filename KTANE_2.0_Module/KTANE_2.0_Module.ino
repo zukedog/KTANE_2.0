@@ -161,7 +161,7 @@ bool prep_loop() {
 
 void armed_setup() {
   Serial.println("MODULE ARMED");
-  Serial.println("Commands: \"disarm\", \"strike\"")
+  Serial.println("Commands: \"disarm\", \"strike\"");
 
 }
 
