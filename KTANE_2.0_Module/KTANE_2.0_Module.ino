@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include <BetterTransferI2CSlave.h>
-#define I2C_SLAVE_ADDRESS 9
+#define I2C_SLAVE_ADDRESS 11
 
 
 String inputString = "";         // a String to hold incoming data
@@ -44,10 +44,13 @@ BetterTransferI2CSlave ET_MODULE_STATE(details(module_state));
 
 void setup() {
   Serial.begin(115200);
+
   Wire.begin(I2C_SLAVE_ADDRESS);
   Wire.onReceive(BetterTransferI2CSlave::onReceive);
   Wire.onRequest(BetterTransferI2CSlave::onSend);;
   inputString.reserve(10);
+  Serial.print("Setup as module: ");
+  Serial.println(I2C_SLAVE_ADDRESS);
 
 }
 
@@ -176,6 +179,11 @@ bool armed_loop() {
     }
     if (inputString == "strike\n") {
       module_state.module_strikes++;
+      Serial.print("Strike. Current module strikes: ");
+      Serial.print(module_state.module_strikes);
+      Serial.print(", game strikes: ");
+      Serial.println(game_state.strikes);
+      
     }
 
     inputString = "";

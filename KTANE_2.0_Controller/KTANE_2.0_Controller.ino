@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <BetterTransferI2CMaster.h>
-#define I2C_SLAVE_ADDRESS 9
 
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
@@ -67,8 +66,10 @@ Module * modules[2];
 void setup() {
   Serial.begin(115200);
   Wire.begin();
-  for (int i=0; i < sizeof(modules) / sizeof(modules[0]); i++){
-    modules[i] = new Module(9+i, game_state);
+  for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
+    modules[i] = new Module(10 + i, game_state);
+    Serial.print("Setup Module: ");
+    Serial.println(10 + i);
   }
   //  ET_GAME_STATE.begin(details(game_state), &Wire);
   //  ET_MODULE_STATE.begin(details(module_state), &Wire);
@@ -113,8 +114,8 @@ void loop() {
     }
     else if (inputString.substring(0, 10) == "batteries ") {
       game_state.strikes = inputString.substring(10, inputString.length() - 1).toInt();
-    }else if(inputString == "\n"){
-      
+    } else if (inputString == "\n") {
+
     }
     else {
       Serial.println("Not a recognised command");
@@ -123,16 +124,27 @@ void loop() {
       return;
     }
     printGameState(game_state);
-    modules[0]->BT_Game->sendData();
+
+    for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
+      modules[i]->BT_Game->sendData();
+    }
 
     // clear the string:
     inputString = "";
     stringComplete = false;
   }
-  if (modules[0]->BT_Module->receiveData()) {
-    Serial.println("Got Data");
+  for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
+    //Serial.print(i);
+    //Serial.print(" - ");
+
+
+    if (modules[i]->BT_Module->receiveData()) {
+    }
   }
-  game_state.strikes = modules[0]->state.module_strikes;
+  game_state.strikes = 0;
+  for (int i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
+    game_state.strikes += modules[i]->state.module_strikes;
+  }
 }
 
 void serialEvent() {
