@@ -8,8 +8,12 @@ bool stringComplete = false;  // whether the string is complete
 
 enum Game_Phase {
   PREP,
-  GAME
+  GAME,
+  WIN,
+  LOSE
 };
+
+Game_Phase lastPhase = PREP;
 
 struct GAME_STATE {
   // This will hold the state of the game, armed, TotalStrikes, edgework, etc.
@@ -32,67 +36,92 @@ struct MODULE_STATE {
 };
 
 
-BetterTransferI2CSlave ET_GAME_STATE;
 GAME_STATE game_state;
+BetterTransferI2CSlave ET_GAME_STATE(details(game_state));
 
-BetterTransferI2CSlave ET_MODULE_STATE;
 MODULE_STATE module_state;
+BetterTransferI2CSlave ET_MODULE_STATE(details(module_state));
 
 void setup() {
   Serial.begin(115200);
   Wire.begin(I2C_SLAVE_ADDRESS);
-  //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
-  ET_GAME_STATE.begin(details(game_state));
-  ET_MODULE_STATE.begin(details(module_state));
-
-  inputString.reserve(10);
   Wire.onReceive(BetterTransferI2CSlave::onReceive);
-  Wire.onRequest(request);;
+  Wire.onRequest(BetterTransferI2CSlave::onSend);;
+  inputString.reserve(10);
+
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  if (lastPhase != game_state.phase) {
+    switch (game_state.phase) {
+      case PREP:
+        reset();
+        prep_setup();
+        break;
+      case GAME:
+        armed_setup();
+        break;
+      case WIN:
+        win_setup();
+        break;
+      case LOSE:
+        lose_setup();
+        break;
+    }
+    lastPhase = game_state.phase;
+  } else {
 
-  if (stringComplete) {
-    if (inputString == "ready\n" || inputString == "disarm\n") {
-      module_state.finished_stage = true;
+    switch (game_state.phase) {
+      case PREP:
+        module_state.finished_stage = prep_loop();
+        break;
+      case GAME:
+        if (!module_state.finished_stage) {
+          if (armed_loop()) {
+            module_state.finished_stage = true;
+            disarm_setup();
+          }
+        } else {
+          disarm_loop();
+        }
+        break;
+      case WIN:
+        win_loop();
+        break;
+      case LOSE:
+        lose_loop();
+        break;
     }
-    if (inputString == "arm\n" || inputString == "unprepared\n") {
-      module_state.finished_stage = false;
-    }
-    if (inputString == "strike\n") {
-      module_state.module_strikes++;
-    }
+  }
 
-    // clear the string:
-    inputString = "";
-    stringComplete = false;
-  }
-  
-  if (ET_GAME_STATE.updateData()) {
-    Serial.print("Phase: ");
-    Serial.println(game_state.phase);
-    Serial.print("Strikes: ");
-    Serial.println(game_state.strikes);
-    Serial.print("Batteries: ");
-    Serial.println(game_state.batteries);
-    Serial.print("PP: ");
-    Serial.println(game_state.parallelPort);
-    Serial.print("Serial: ");
-    if (game_state.serialOdd) {
-      Serial.print("Odd, ");
-    } else {
-      Serial.print("Even, ");
-    }
-    if (game_state.serialVowel) {
-      Serial.println("Vowel ");
-    } else {
-      Serial.println("No Vowel ");
-    }
-  }
+
+  //  if (ET_GAME_STATE.newData()) {
+  //    printGameState(game_state);
+  //  }
 
 }
 
+void printGameState(GAME_STATE gs) {
+  Serial.print("Phase: ");
+  Serial.println(gs.phase);
+  Serial.print("Strikes: ");
+  Serial.println(gs.strikes);
+  Serial.print("Batteries: ");
+  Serial.println(gs.batteries);
+  Serial.print("PP: ");
+  Serial.println(gs.parallelPort);
+  Serial.print("Serial: ");
+  if (gs.serialOdd) {
+    Serial.print("Odd, ");
+  } else {
+    Serial.print("Even, ");
+  }
+  if (gs.serialVowel) {
+    Serial.println("Vowel ");
+  } else {
+    Serial.println("No Vowel ");
+  }
+}
 
 void serialEvent() {
   while (Serial.available()) {
@@ -116,7 +145,76 @@ struct PRIVATE_MODULE_STATE {
   // make sure you define arrays like this "int stuff[5];" not like this "int stuff[];" it breaks if they are dynamically assigned
 };
 
-void receive(int numBytes) {}
-void request() {
-  ET_MODULE_STATE.sendData();
+
+
+void prep_setup() {
+  Serial.println("BEGINING SETUP");
+}
+
+bool prep_loop() {
+  // This is the loop that will run when the bomb is in its prep phase
+  // Return true if the bomb is ready to be armed
+  return false;
+}
+
+
+
+void armed_setup() {
+  Serial.println("MODULE ARMED");
+  Serial.println("Commands: \"disarm\", \"strike\"")
+
+}
+
+bool armed_loop() {
+  // This is the loop that will run when the bomb is in its game phase
+  // Return true if the bomb is ready to be disarmed
+  if (stringComplete) {
+    if (inputString == "disarm\n") {
+      inputString = "";
+      stringComplete = false;
+      return true;
+    }
+    if (inputString == "strike\n") {
+      module_state.module_strikes++;
+    }
+
+    inputString = "";
+    stringComplete = false;
+  }
+  return false;
+}
+
+void disarm_setup() {
+  Serial.println("MODULE DISARMED");
+  Serial.println("No Commands. Waiting for win, lose or reset");
+
+}
+
+void disarm_loop() {
+  // I doubt there is likley to be anything to go here but there may be an animation to play when module is disarmed
+  // Needy modules might also use this to rearm themselves
+}
+
+void win_setup() {
+  Serial.println("BOMB COMPLETED");
+
+}
+
+bool win_loop() {
+  //return if win animation has finished
+  return true;
+}
+void lose_setup() {
+  Serial.println("KABOOOOM!!! YOU BEEN EXPLODIFICATED!!!");
+
+}
+
+bool lose_loop() {
+  //return if lose animation has finished
+  return true;
+}
+
+void reset() {
+  Serial.println("NOT SURE WHAT THE POINT OF RESET IS");
+
 }

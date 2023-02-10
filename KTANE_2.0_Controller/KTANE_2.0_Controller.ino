@@ -8,7 +8,9 @@ unsigned long last_polled = 0;
 
 enum Game_Phase {
   PREP,
-  GAME
+  GAME,
+  WIN,
+  LOSE
 };
 
 struct GAME_STATE {
@@ -29,65 +31,92 @@ struct MODULE_STATE {
   bool finished_stage;
   char module_name[4];
   uint8_t private_size;
+};
+
+class Module {
+    Module(byte i2c_address, GAME_STATE state){
+      address(9, &Wire);
+    }
+  private:
+    BT_Address address(int, TwoWire*);
+    MODULE_STATE state;
+    BetterTransferI2CMaster BT_Game(uint8_t *, uint8_t, BT_Address *);
+    BetterTransferI2CMaster BT_Module(uint8_t *, uint8_t, BT_Address *);
+    BetterTransferI2CMaster BT_PrivateModule(uint8_t *, uint8_t, BT_Address *);
+
+  public:
 
 };
 
+BT_Address NINE(9, &Wire);
 
-BetterTransferI2CMaster ET_GAME_STATE;
 GAME_STATE game_state;
+BetterTransferI2CMaster BT_GAME_STATE(details(game_state), &NINE);
 
-BetterTransferI2CMaster ET_MODULE_STATE;
 MODULE_STATE module_state;
+BetterTransferI2CMaster BT_MODULE_STATE(details(module_state), &NINE);
+
 
 
 void setup() {
   Serial.begin(115200);
   Wire.begin();
-  ET_GAME_STATE.begin(details(game_state), &Wire);
-  ET_MODULE_STATE.begin(details(module_state), &Wire);
+  //  ET_GAME_STATE.begin(details(game_state), &Wire);
+  //  ET_MODULE_STATE.begin(details(module_state), &Wire);
 
   inputString.reserve(10);
 }
 void loop() {
 
   if (stringComplete) {
-    if (inputString == "arm\n") {
-      game_state.phase = GAME;
-    }
-    if (inputString == "disarm\n") {
+    if (inputString == "phase prep\n") {
       game_state.phase = PREP;
     }
-    if (inputString == "odd\n") {
+    else if (inputString == "phase game\n") {
+      game_state.phase = GAME;
+    }
+    else if (inputString == "phase win\n") {
+      game_state.phase = WIN;
+    }
+    else if (inputString == "phase lose\n") {
+      game_state.phase = LOSE;
+    }
+    else if (inputString.substring(0, 11) == "strike set ") {
+      game_state.strikes = inputString.substring(11, inputString.length() - 1).toInt();
+    }
+    else if (inputString == "serial odd\n") {
       game_state.serialOdd = true;
     }
-    if (inputString == "even\n") {
+    else if (inputString == "serial even\n") {
       game_state.serialOdd = false;
     }
-    if (inputString == "vowel\n") {
+    else if (inputString == "serial vowel true\n") {
       game_state.serialVowel = true;
     }
-    if (inputString == "novowel\n") {
+    else if (inputString == "serial vowel false\n") {
       game_state.serialVowel = false;
     }
-    if (inputString == "strike\n") {
-      game_state.strikes++;
+    else if (inputString == "port true\n") {
+      game_state.parallelPort = true;
     }
-    ET_GAME_STATE.sendData(I2C_SLAVE_ADDRESS);
+    else if (inputString == "port false\n") {
+      game_state.parallelPort = false;
+    }
+    else if (inputString.substring(0, 10) == "batteries ") {
+      game_state.strikes = inputString.substring(10, inputString.length() - 1).toInt();
+    }
+    else {
+      Serial.println("Not a recognised command");
+    }
+    printGameState(game_state);
+    BT_GAME_STATE.sendData();
 
     // clear the string:
     inputString = "";
     stringComplete = false;
   }
 
-  if (millis() > last_polled + 100) {
-    last_polled = millis();
-    if (ET_MODULE_STATE.receiveData(I2C_SLAVE_ADDRESS)) {
-      Serial.print("Module Strikes: ");
-      Serial.println(module_state.module_strikes);
-      Serial.print("Finished Stage: ");
-      Serial.println(module_state.finished_stage);
-    }
-  }
+  game_state.strikes = module_state.module_strikes;
 }
 
 void serialEvent() {
@@ -104,37 +133,24 @@ void serialEvent() {
   }
 }
 
-
-void prep_setup() {
-
-}
-
-bool prep_loop() {
-  // This is the loop that will run when the bomb is in its prep phase
-  // Return true if the bomb is ready to be armed
-  return false;
-}
-
-
-
-void game_setup() {
-
-}
-
-bool game_loop() {
-  // This is the loop that will run when the bomb is in its game phase
-  // Return true if the bomb is ready to be armed
-  return false;
-}
-
-void disarmed() {
-
-}
-
-void win() {
-
-}
-
-void reset() {
-
+void printGameState(GAME_STATE gs) {
+  Serial.print("Phase: ");
+  Serial.println(gs.phase);
+  Serial.print("Strikes: ");
+  Serial.println(gs.strikes);
+  Serial.print("Batteries: ");
+  Serial.println(gs.batteries);
+  Serial.print("PP: ");
+  Serial.println(gs.parallelPort);
+  Serial.print("Serial: ");
+  if (gs.serialOdd) {
+    Serial.print("Odd, ");
+  } else {
+    Serial.print("Even, ");
+  }
+  if (gs.serialVowel) {
+    Serial.println("Vowel ");
+  } else {
+    Serial.println("No Vowel ");
+  }
 }
