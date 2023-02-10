@@ -34,33 +34,42 @@ struct MODULE_STATE {
 };
 
 class Module {
-    Module(byte i2c_address, GAME_STATE state){
-      address(9, &Wire);
-    }
+
   private:
-    BT_Address address(int, TwoWire*);
-    MODULE_STATE state;
-    BetterTransferI2CMaster BT_Game(uint8_t *, uint8_t, BT_Address *);
-    BetterTransferI2CMaster BT_Module(uint8_t *, uint8_t, BT_Address *);
-    BetterTransferI2CMaster BT_PrivateModule(uint8_t *, uint8_t, BT_Address *);
+
 
   public:
-
+    Module(byte i2c_address, GAME_STATE &gState) {
+      address = new BT_Address(i2c_address, &Wire);
+      BT_Game = new BetterTransferI2CMaster(details(gState), address);
+      BT_Module = new BetterTransferI2CMaster(details(state), address);
+      //BT_PrivateModule(uint8_t *, uint8_t, BT_Address *);
+    }
+    BT_Address * address;
+    MODULE_STATE state;
+    BetterTransferI2CMaster * BT_Game;
+    BetterTransferI2CMaster * BT_Module;
+    //BetterTransferI2CMaster * BT_PrivateModule(uint8_t *, uint8_t, BT_Address *);
 };
 
-BT_Address NINE(9, &Wire);
+//BT/_Address NINE(9, &Wire);
 
 GAME_STATE game_state;
-BetterTransferI2CMaster BT_GAME_STATE(details(game_state), &NINE);
+Module * modules[2];
 
-MODULE_STATE module_state;
-BetterTransferI2CMaster BT_MODULE_STATE(details(module_state), &NINE);
 
+//BetterTransferI2CMaster BT_GAME_STATE(details(game_state), &NINE);
+//
+//MODULE_STATE module_state;
+//BetterTransferI2CMaster BT_MODULE_STATE(details(module_state), &NINE);
 
 
 void setup() {
   Serial.begin(115200);
   Wire.begin();
+  for (int i=0; i < sizeof(modules) / sizeof(modules[0]); i++){
+    modules[i] = new Module(9+i, game_state);
+  }
   //  ET_GAME_STATE.begin(details(game_state), &Wire);
   //  ET_MODULE_STATE.begin(details(module_state), &Wire);
 
@@ -104,19 +113,26 @@ void loop() {
     }
     else if (inputString.substring(0, 10) == "batteries ") {
       game_state.strikes = inputString.substring(10, inputString.length() - 1).toInt();
+    }else if(inputString == "\n"){
+      
     }
     else {
       Serial.println("Not a recognised command");
+      inputString = "";
+      stringComplete = false;
+      return;
     }
     printGameState(game_state);
-    BT_GAME_STATE.sendData();
+    modules[0]->BT_Game->sendData();
 
     // clear the string:
     inputString = "";
     stringComplete = false;
   }
-
-  game_state.strikes = module_state.module_strikes;
+  if (modules[0]->BT_Module->receiveData()) {
+    Serial.println("Got Data");
+  }
+  game_state.strikes = modules[0]->state.module_strikes;
 }
 
 void serialEvent() {
@@ -134,6 +150,7 @@ void serialEvent() {
 }
 
 void printGameState(GAME_STATE gs) {
+  Serial.println("------------");
   Serial.print("Phase: ");
   Serial.println(gs.phase);
   Serial.print("Strikes: ");
