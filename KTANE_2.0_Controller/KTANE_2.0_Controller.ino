@@ -1,36 +1,10 @@
 #include <Wire.h>
+#include <KTANE_Common.h>
 #include <BetterTransferI2CMaster.h>
 
 String inputString = "";         // a String to hold incoming data
 bool stringComplete = false;  // whether the string is complete
 unsigned long last_polled = 0;
-
-enum Game_Phase {
-  PREP,
-  GAME,
-  WIN,
-  LOSE
-};
-
-struct GAME_STATE {
-  // This will hold the state of the game, armed, TotalStrikes, edgework, etc.
-  // This needs to be the same on all modules and the controller
-  int strikes;
-  Game_Phase phase;
-  int batteries;
-  bool parallelPort;
-  bool serialOdd;
-  bool serialVowel;
-};
-
-struct MODULE_STATE {
-  // This will hold the state of the module that is shared between modules and the controller, ModuleStrikes, FinishedStage
-  // This needs to be the same on all modules and the controller
-  int module_strikes;
-  bool finished_stage;
-  char module_name[4];
-  uint8_t private_size;
-};
 
 class Module {
 
